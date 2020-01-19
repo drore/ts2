@@ -1,6 +1,6 @@
 const express = require('express')
 const cors = require('cors')
-const mongoose = require('mongoose')
+const database = require('./database')
 
 require('dotenv').config();
 
@@ -10,19 +10,13 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-
-const uri = process.env.ATLAS_URI
-mongoose.connect(uri, {useNewUrlParser: true, useCreateIndex: true});
-const connection = mongoose.connection;
-connection.once('open',() => {
-    console.log('MongoDB db connection established successfully')
-})
-
 // Routes
-const memoriesRouter = require('./routes/memories')
+const manuscriptsRouter = require('./routes/manuscripts')
 const usersRouter = require('./routes/users')
+const linesRouter = require('./routes/lines')
 
-app.use('/memories', memoriesRouter)
+app.use('/lines', linesRouter)
+app.use('/manuscripts', manuscriptsRouter)
 app.use('/users', usersRouter)
 
 app.listen(port, () => {

@@ -1,13 +1,9 @@
-import {auth, StoreDB, ServerTimestamp} from "./firebase";
+import { auth, StoreDB, ServerTimestamp } from "./firebase";
+import axios from 'axios'
 
 export default {
   getCollection(collection) {
     return StoreDB.collection(collection).get()
-  },
-  getTranslations(lang) {
-    return StoreDB.collection('translations')
-      .where('lang', '==', lang)
-      .get()
   },
   createUser(userData) {
     return auth
@@ -147,18 +143,13 @@ export default {
         name = 'bnf150'
       }
       // First look in the 
-      query = StoreDB.collection('manuscripts')
-        .where('name', '==', name)
-        .limit(1)
+      const manuscript = await axios.get(`http://localhost:5000/manuscripts?name=${name}`)
 
-      const manuscripts = await query.get()
-      const manuscriptDoc = manuscripts.docs[0];
-      const manuscriptData = manuscriptDoc.data()
+      const manuscriptData = manuscript.data[0]
       const msObj = Object.assign({
-        id: manuscriptDoc.id
+        id: manuscriptData._id
       }, manuscriptData);
       resolve(msObj)
-
     });
   },
   async addConversationMessage(params) {
@@ -264,20 +255,17 @@ export default {
       line++
     }
 
-    return new Promise((resolve, reject) => {
-      StoreDB.collection(`manuscripts/${msId}/lines/`)
-        .where('page', '==', page)
-        .where('line', '==', line)
-        .limit(1)
-        .get()
-        .then(res => {
-          if (res.size) {
-            const lineSnap = res.docs[0]
-            resolve({ data: lineSnap.data(), id: lineSnap.id })
-          } else {
-            reject()
-          }
-        })
+    return new Promise(async (resolve, reject) => {
+      const line = await axios.get(`http://localhost:5000/lines?msId=${msId}&page=${page}&line${line}`)
+
+
+      if (line.data.length) {
+        const lineData = line.data[0]
+        resolve({ data: lineData, id: lineData._id })
+      } else {
+        reject()
+      }
+
     })
   },
   // General index is the index in the array, roughly the order in the ms
@@ -352,11 +340,10 @@ export default {
 
   async getManuscripts() {
     return new Promise(async (resolve, reject) => {
-      const manuscriptsQuerySnapshot = await StoreDB.collection('manuscripts').get()
-      const manuscripts = manuscriptsQuerySnapshot.docs.map(snap => {
+      const manuscriptsRes = await axios.get('http://localhost:5000/manuscripts')
 
-        const msData = snap.data()
-        return Object.assign(msData, { id: snap.id })
+      const manuscripts = manuscriptsRes.data.map(ms => {
+        return Object.assign(ms, { id: ms._id })
       })
 
       resolve(manuscripts)
@@ -444,9 +431,6 @@ export default {
 
     return false
 
-  },
-  updateTranslation(translation) {
-    return this.updateDocument('translations', translation.id, translation)
   },
   async getReplies(path) {
     return new Promise(async (resolve, reject) => {
